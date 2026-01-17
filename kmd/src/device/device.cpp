@@ -36,18 +36,14 @@ namespace device {
             return status;
         }
 
-        //device_object->Flags |= DO_BUFFERED_IO;
-        SetFlag(device_object->Flags, DO_BUFFERED_IO);
+        device_object->Flags |= DO_BUFFERED_IO;
+        device_object->Flags &= ~DO_DEVICE_INITIALIZING;
 
         driver_object->MajorFunction[IRP_MJ_CREATE] = dispatch::create;
         driver_object->MajorFunction[IRP_MJ_CLOSE] = dispatch::close;
         driver_object->MajorFunction[IRP_MJ_DEVICE_CONTROL] = dispatch::device_control;
 
-        //device_object->Flags &= ~DO_DEVICE_INITIALIZING;
-        ClearFlag(device_object->Flags, DO_DEVICE_INITIALIZING);
-
         driver_object->DriverUnload = destroy;
         return STATUS_SUCCESS;
     }
-
 }
