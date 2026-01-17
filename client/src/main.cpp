@@ -3,6 +3,62 @@
 #include <TlHelp32.h>
 #include <ioctls.h>
 
+bool service_exists(const wchar_t* name) {
+    SC_HANDLE scm = OpenSCManager(nullptr, nullptr, SC_MANAGER_CONNECT);
+    if (!scm) return false;
+
+    SC_HANDLE svc = OpenServiceW(scm, name, SERVICE_QUERY_STATUS);
+    bool exists = (svc != nullptr);
+
+    if (svc) CloseServiceHandle(svc);
+    CloseServiceHandle(scm);
+    return exists;
+}
+
+bool create_service(const wchar_t* name, const wchar_t* path) {
+    SC_HANDLE scm = OpenSCManager(nullptr, nullptr, SC_MANAGER_CREATE_SERVICE);
+    if (!scm) return false;
+
+    SC_HANDLE svc = CreateServiceW(
+        scm,
+        name,
+        name,
+        SERVICE_START | DELETE | SERVICE_STOP,
+        SERVICE_KERNEL_DRIVER,
+        SERVICE_DEMAND_START,
+        SERVICE_ERROR_IGNORE,
+        path,
+        nullptr, nullptr, nullptr, nullptr, nullptr
+    );
+
+    if (!svc && GetLastError() != ERROR_SERVICE_EXISTS) {
+        CloseServiceHandle(scm);
+        return false;
+    }
+
+    if (svc) CloseServiceHandle(svc);
+    CloseServiceHandle(scm);
+    return true;
+}
+
+bool start_driver(const wchar_t* name) {
+    SC_HANDLE scm = OpenSCManager(nullptr, nullptr, SC_MANAGER_CONNECT);
+    if (!scm) return false;
+
+    SC_HANDLE svc = OpenServiceW(scm, name, SERVICE_START);
+    if (!svc) {
+        CloseServiceHandle(scm);
+        return false;
+    }
+
+    bool ok = StartServiceW(svc, 0, nullptr) || GetLastError() == ERROR_SERVICE_ALREADY_RUNNING;
+
+    CloseServiceHandle(svc);
+    CloseServiceHandle(scm);
+    return ok;
+}
+
+
 static DWORD get_process_id(const wchar_t* process_name) {
     DWORD process_id = 0;
 
@@ -49,6 +105,15 @@ bool attach_to_process(HANDLE driver, DWORD pid) {
 
 int main() {
     std::wcout << L"[+] starting test\n";
+
+    const wchar_t* name = L"kmd";
+    const wchar_t* path = L"D:\\Projects\\cs2-external-cheat\\build\\kmd.sys";
+
+    if (!service_exists(name)) {
+        create_service(name, path);
+    }
+
+    std::cout << std::boolalpha << start_driver(name) << std::endl;
 
     DWORD pid = get_process_id(L"notepad.exe");
     if (!pid) {
