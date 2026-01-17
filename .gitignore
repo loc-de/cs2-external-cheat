@@ -1,3 +1,9 @@
+build/
+.vs/
+
+*.user
+*.filters
+
 # Prerequisites
 *.d
 
