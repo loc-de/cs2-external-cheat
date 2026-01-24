@@ -4,28 +4,23 @@
 #include "../core/win.h"
 #include "../core/types.h"
 
-#include <d3d11.h>
-#include <dxgi1_2.h>
-#include <d3dcompiler.h>
-#include <dcomp.h>
-
 namespace render { 
 	class DrawList; 
 }
 
-//struct ID3D11Device;
-//struct ID3D11DeviceContext;
-//struct IDXGISwapChain1;
-//struct ID3D11RenderTargetView;
-//struct ID3D11VertexShader;
-//struct ID3D11PixelShader;
-//struct ID3D11InputLayout;
-//struct ID3D11BlendState;
-//struct ID3D11Buffer;
-//
-//struct IDCompositionDevice;
-//struct IDCompositionTarget;
-//struct IDCompositionVisual;
+struct ID3D11Device;
+struct ID3D11DeviceContext;
+struct IDXGISwapChain1;
+struct ID3D11RenderTargetView;
+struct ID3D11VertexShader;
+struct ID3D11PixelShader;
+struct ID3D11InputLayout;
+struct ID3D11BlendState;
+struct ID3D11Buffer;
+
+struct IDCompositionDevice;
+struct IDCompositionTarget;
+struct IDCompositionVisual;
 
 namespace gfx {
 
