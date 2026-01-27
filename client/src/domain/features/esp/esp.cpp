@@ -9,6 +9,7 @@ namespace features {
 
 	void Esp::run(const game::Context& ctx, render::DrawList& draw, const core::Extent& ss) {
         if (!_cfg.enabled) return;
+        if (!_cfg.teammates.enabled && !_cfg.enemies.enabled) return;
         if (ctx.entities().empty()) return;
 
         const auto& local = ctx.local();
@@ -18,30 +19,74 @@ namespace features {
 
             bool is_mate = ent.team == local.team;
             if (is_mate && !_cfg.teammates.enabled) continue;
+            if (!is_mate && !_cfg.enemies.enabled) continue;
 
-            core::Color color = is_mate ? _cfg.teammates.color : _cfg.enemies.color;
+            const auto& cfg = is_mate ? _cfg.teammates : _cfg.enemies;
+            BoundingBox box = calcBoundingBox(ent, local, ss);
+            if (!box.valid) continue;
 
-            float w_height = ent.maxs.z - ent.mins.z;
+            if (cfg.box)
+                drawBox(box, cfg.color, draw);
 
-            math::Vec3 feet = ent.feet;
-            feet.z += ent.mins.z;
-            math::Vec3 head = ent.feet;
-            head.z += w_height;
-
-            math::Vec3 s_feet, s_head;
-            if (!math::w2s(feet, s_feet, local.vm, ss)) continue;
-            if (!math::w2s(head, s_head, local.vm, ss)) continue;
-
-            float h = s_feet.y - s_head.y;
-            float w = h / 2.4f;
-            float x = s_head.x - (w / 2.0f);
-            float y = s_head.y;
-
-            draw.add(
-                { x, y, w, h },
-                color
-            );
+            if (cfg.health)
+                drawHealthBar(box, ent.health, draw);
         }
 	}
+
+    Esp::BoundingBox Esp::calcBoundingBox(const game::Entity& ent, const game::LocalPlayer& local, const core::Extent& ss) {
+        math::Vec3 feet = ent.feet;
+        feet.z += ent.mins.z;
+        math::Vec3 head = ent.feet;
+        head.z += ent.maxs.z; // -ent.mins.z;
+
+        math::Vec3 s_feet, s_head;
+        if (!math::w2s(feet, s_feet, local.vm, ss) || !math::w2s(head, s_head, local.vm, ss)) 
+            return { {0, 0}, {0, 0}, false };
+
+        float h = s_feet.y - s_head.y;
+        if (h < 1.0f) return { {0, 0}, {0, 0}, false };
+
+        float w = h / 2.4f;
+        float x = s_head.x - (w / 2.0f);
+        float y = s_head.y;
+
+        return { {x, y}, {w, h}, true };
+    }
+
+    void Esp::drawBox(const BoundingBox& box, const core::Color& color, render::DrawList& draw) {
+        draw.addBox({ box.pos.x, box.pos.y, box.size.x, box.size.y }, color);
+    }
+    
+    void Esp::drawHealthBar(const BoundingBox& box, int health, render::DrawList& draw) {
+        health = std::max(0, std::min(health, 100));
+
+        float bar_width = 4.0f;
+        float bar_pad = 2.0f;
+
+        float bar_x = box.pos.x - bar_pad - bar_width;
+        float bar_y = box.pos.y;
+        float bar_h = box.size.y;
+
+        draw.addRect(
+            { bar_x, bar_y, bar_width, bar_h },
+            { 0.0f, 0.0f, 0.0f, 0.5f }
+        );
+
+        float hp_perc = health / 100.0f;
+        float fill_h = bar_h * hp_perc;
+        float fill_y = bar_y + (bar_h - fill_h);
+
+        core::Color hp_color = {
+            (health > 50) ? (1.0f - hp_perc) * 2.0f : 1.0f,
+            (health > 50) ? 1.0f : hp_perc * 2.0f,
+            0.0f,
+            1.0f
+        };
+
+        draw.addRect(
+            { bar_x + 1, fill_y + 1, bar_width - 2, fill_h - 2 },
+            hp_color
+        );
+    }
 
 }

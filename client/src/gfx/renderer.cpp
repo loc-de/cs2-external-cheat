@@ -201,11 +201,15 @@ namespace gfx {
 
     void Renderer::draw(const render::DrawList& list) {
         const auto& rects = list.rects();
-        const UINT needed = (UINT)rects.size() * 6;
+        const auto& lines = list.lines();
+
+        const UINT verts_rects = (UINT)rects.size() * 6;
+        const UINT verts_lines = (UINT)lines.size() * 2;
+        const UINT needed = verts_rects + verts_lines;
         if (needed == 0) return;
 
         if (!_vb || needed > _vbCap) {
-            _vbCap = (needed < 256) ? 256 : needed;
+            _vbCap = (needed < 256) ? 256 : needed + 128;
 
             D3D11_BUFFER_DESC bd{};
             bd.Usage = D3D11_USAGE_DYNAMIC;
@@ -222,8 +226,8 @@ namespace gfx {
         auto* out = (Vtx*)ms.pData;
 
         for (const auto& cmd : rects) {
-			core::Vec2 v_lt = { cmd.rect.x, cmd.rect.y };
-			core::Vec2 v_rb = { cmd.rect.x + cmd.rect.w, cmd.rect.y + cmd.rect.h };
+            core::Vec2 v_lt = { cmd.rect.x, cmd.rect.y };
+            core::Vec2 v_rb = { cmd.rect.x + cmd.rect.w, cmd.rect.y + cmd.rect.h };
 
             core::Vec2 ndc_lt = pxToNdc(v_lt, _size);
             core::Vec2 ndc_rb = pxToNdc(v_rb, _size);
@@ -237,14 +241,26 @@ namespace gfx {
             *out++ = { { ndc_lt.x, ndc_rb.y }, cmd.color };
         }
 
+        for (const auto& cmd : lines) {
+            *out++ = { pxToNdc(cmd.a, _size), cmd.color };
+            *out++ = { pxToNdc(cmd.b, _size), cmd.color };
+        }
+
         _ctx->Unmap(_vb.Get(), 0);
 
         UINT stride = sizeof(Vtx);
         UINT offset = 0;
         _ctx->IASetVertexBuffers(0, 1, _vb.GetAddressOf(), &stride, &offset);
-        _ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-        _ctx->Draw(needed, 0);
+        if (verts_rects > 0) {
+            _ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            _ctx->Draw(verts_rects, 0);
+        }
+
+        if (verts_lines > 0) {
+            _ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+            _ctx->Draw(verts_lines, verts_rects);
+        }
     }
 
     void Renderer::end() {

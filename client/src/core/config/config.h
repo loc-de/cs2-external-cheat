@@ -22,14 +22,14 @@ namespace core::config {
 
     struct OverlayConfig {
         std::wstring title = L"overlay";
-        int delay = 100;
+        int delay = 20;
     };
 
     struct EntityEspConfig {
         bool enabled = true;
         bool box = true;
         bool health = true;
-        bool name = true;
+        //bool name = true;
         //bool skeleton = false;
 
         core::Color color = core::Color::red();
@@ -38,8 +38,15 @@ namespace core::config {
     struct EspConfig {
         bool enabled = true;
 
-        EntityEspConfig enemies{ true, true, true, true, core::Color::red() };
-        EntityEspConfig teammates{ false, false, false, false, core::Color::green() };
+        EntityEspConfig enemies{ true, true, true, core::Color::red() };
+        EntityEspConfig teammates{ false, false, false, core::Color::green() };
+    };
+
+    struct MemoryConfig {
+        int max_items = 64;
+        int max_pawns = 512;
+        int item_size = 256;
+        int pawn_size = 128;
     };
 
     struct AppConfig {
@@ -47,6 +54,7 @@ namespace core::config {
         UpdaterConfig updater;
         OverlayConfig overlay;
         EspConfig esp;
+        MemoryConfig memory;
     };
 
     class Settings {

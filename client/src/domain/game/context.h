@@ -19,7 +19,8 @@ namespace game {
 	private:
 		driver::Driver& _driver;
 		offsets::Offsets& _off;
-		const core::config::EspConfig& _cfg;
+		const core::config::EspConfig& _esp_cfg;
+		const core::config::MemoryConfig& _m_cfg;
 
 		LocalPlayer _local{};
 		std::vector<Entity> _entities;

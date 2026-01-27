@@ -76,7 +76,7 @@ namespace app {
                 _renderer.resize(size);
 
             if (!ensureConnection()) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(_cfg.overlay.delay));
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 continue;
             }
 
@@ -94,7 +94,7 @@ namespace app {
             _renderer.end();
 
             core::config::Settings::get().update();
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            std::this_thread::sleep_for(std::chrono::milliseconds(_cfg.overlay.delay));
         }
 
         timeEndPeriod(1);

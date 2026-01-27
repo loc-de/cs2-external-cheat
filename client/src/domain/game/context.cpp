@@ -4,11 +4,13 @@
 namespace game {
 
 	Context::Context(driver::Driver& d)
-		: _driver(d), _off(offsets::Offsets::get()), _cfg(core::config::Settings::read().esp)
+		: _driver(d), _off(offsets::Offsets::get()), 
+        _esp_cfg(core::config::Settings::read().esp),
+        _m_cfg(core::config::Settings::read().memory)
 	{
-        _entities.reserve(64);
-		_buf.resize(64 * 256);
-        _pawn_buf.resize(512 * 128);
+        _entities.reserve(_m_cfg.max_items);
+        _buf.resize(_m_cfg.max_items * _m_cfg.item_size);
+        _pawn_buf.resize(_m_cfg.max_pawns * _m_cfg.pawn_size);
 	}
 
 	void Context::update() {
@@ -40,8 +42,8 @@ namespace game {
         uintptr_t chunk1_ptr = _driver.read<uintptr_t>(e_list + 16 + 8);
         if (!chunk0_ptr || !chunk1_ptr) return;
 
-        size_t size_ctrl = 64 * stride;
-        size_t size_pawn = 512 * stride;
+        size_t size_ctrl = _m_cfg.max_items * stride;
+        size_t size_pawn = _m_cfg.max_pawns * stride;
 
         if (_buf.size() < size_ctrl) _buf.resize(size_ctrl);
         if (!_driver.readBuf(chunk0_ptr, _buf.data(), size_ctrl)) return;
@@ -49,7 +51,7 @@ namespace game {
         if (_pawn_buf.size() < size_pawn) _pawn_buf.resize(size_pawn);
         if (!_driver.readBuf(chunk1_ptr, _pawn_buf.data(), size_pawn)) return;
 
-        for (int i = 0; i < 64; i++) {
+        for (int i = 0; i < _m_cfg.max_items; i++) {
             uint8_t* entry_ptr = _buf.data() + (i * stride);
             uintptr_t e_ctrl = *reinterpret_cast<uintptr_t*>(entry_ptr);
             if (!e_ctrl) continue;
@@ -61,7 +63,7 @@ namespace game {
             int chunk_id = (e_handle & 0x7fff) >> 9;
             int chunk_inx = e_handle & 0x1ff;
 
-            if (chunk_id == 1) {
+            if (chunk_id == 1 && chunk_inx < _m_cfg.max_pawns) {
                 uint8_t* pawn_entry_ptr = _pawn_buf.data() + (chunk_inx * stride);
                 entity = *reinterpret_cast<uintptr_t*>(pawn_entry_ptr);
             }
@@ -80,7 +82,7 @@ namespace game {
             if (health <= 0 || health > 100) continue;
 
             int team = _driver.read<int>(entity + _off.schemas().m_iTeamNum);
-            if (team == _local.team && !_cfg.teammates.enabled) continue;
+            if (team == _local.team && !_esp_cfg.teammates.enabled) continue;
 			if (team < 2 || team > 3) continue;
 
             uintptr_t gsn = _driver.read<uintptr_t>(entity + _off.schemas().m_pGameSceneNode);
